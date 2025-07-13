@@ -1,51 +1,44 @@
-import streamlit as st
+import numpy as np
+import matplotlib.pyplot as plt
 from scipy.optimize import linprog
 
-st.set_page_config(page_title="Optimasi Produksi Meja dan Kursi", layout="centered")
+# Fungsi objektif (maks Z = 500000x + 300000y) → min -Z
+c = [-500000, -300000]
 
-st.title("📊 Aplikasi Optimasi Produksi Meja dan Kursi")
+# Kendala: 3x + 2y <= 120, 4x + 2y <= 160
+A = [
+    [3, 2],
+    [4, 2]
+]
+b = [120, 160]
 
-st.markdown("""
-Masukkan data untuk menghitung jumlah meja dan kursi yang harus diproduksi untuk memaksimalkan keuntungan.
-""")
+# Selesaikan LP
+res = linprog(c, A_ub=A, b_ub=b, method='highs')
 
-# Input dari user
-col1, col2 = st.columns(2)
+# Plot grafik
+x_vals = np.linspace(0, 50, 400)
+y1 = (120 - 3 * x_vals) / 2
+y2 = (160 - 4 * x_vals) / 2
 
-with col1:
-    profit_meja = st.number_input("Keuntungan per Meja (Rp)", value=500000)
-    kayu_meja = st.number_input("Kebutuhan Kayu per Meja", value=3)
-    waktu_meja = st.number_input("Waktu Kerja per Meja (jam)", value=4)
+plt.figure(figsize=(8,6))
+plt.plot(x_vals, y1, label=r'$3x + 2y \leq 120$', color='blue')
+plt.plot(x_vals, y2, label=r'$4x + 2y \leq 160$', color='green')
 
-with col2:
-    profit_kursi = st.number_input("Keuntungan per Kursi (Rp)", value=300000)
-    kayu_kursi = st.number_input("Kebutuhan Kayu per Kursi", value=2)
-    waktu_kursi = st.number_input("Waktu Kerja per Kursi (jam)", value=2)
+# Arsiran daerah layak
+plt.fill_between(x_vals, np.minimum(y1, y2), 0, where=(y1 > 0) & (y2 > 0), color='skyblue', alpha=0.3)
 
-st.markdown("### Batasan Sumber Daya")
-total_kayu = st.number_input("Total Kayu Tersedia", value=120)
-total_waktu = st.number_input("Total Jam Kerja Tersedia", value=160)
+# Titik solusi optimal
+if res.success:
+    x_opt, y_opt = res.x
+    plt.plot(x_opt, y_opt, 'ro', label='Solusi optimal')
+    plt.text(x_opt + 0.5, y_opt, f'({x_opt:.0f}, {y_opt:.0f})', color='red')
 
-if st.button("Hitung Optimasi"):
-    # Fungsi objektif (max → min)
-    c = [-profit_meja, -profit_kursi]
-
-    # Matriks kendala
-    A = [
-        [kayu_meja, kayu_kursi],
-        [waktu_meja, waktu_kursi]
-    ]
-    b = [total_kayu, total_waktu]
-
-    result = linprog(c, A_ub=A, b_ub=b, method="highs")
-
-    if result.success:
-        x, y = result.x
-        total_profit = -result.fun
-
-        st.success("✅ Solusi optimal ditemukan!")
-        st.write(f"Jumlah Meja yang diproduksi: **{x:.2f}**")
-        st.write(f"Jumlah Kursi yang diproduksi: **{y:.2f}**")
-        st.write(f"Total Keuntungan Maksimum: **Rp {total_profit:,.2f}**")
-    else:
-        st.error("❌ Gagal menemukan solusi.")
+# Label dan tampilan
+plt.xlim(0, 50)
+plt.ylim(0, 80)
+plt.xlabel('Meja (x)')
+plt.ylabel('Kursi (y)')
+plt.title('Grafik Linear Programming: Produksi Meja & Kursi')
+plt.grid(True)
+plt.legend()
+plt.show()
