@@ -1,56 +1,51 @@
 import streamlit as st
 from scipy.optimize import linprog
-import numpy as np
 
-st.set_page_config(page_title="Optimasi Produksi", layout="centered")
+st.set_page_config(page_title="Optimasi Produksi Meja dan Kursi", layout="centered")
 
-st.title("📦 Aplikasi Optimasi Produksi (Linear Programming)")
+st.title("📊 Aplikasi Optimasi Produksi Meja dan Kursi")
 
 st.markdown("""
-Masukkan koefisien untuk fungsi objektif dan kendala.  
-Contoh: Maksimalkan Z = 40x + 30y  
-Dengan kendala:  
-- 2x + y ≤ 100  
-- x + y ≤ 80
+Masukkan data untuk menghitung jumlah meja dan kursi yang harus diproduksi untuk memaksimalkan keuntungan.
 """)
 
-st.subheader("Fungsi Objektif")
-c1 = st.number_input("Koefisien x", value=40.0)
-c2 = st.number_input("Koefisien y", value=30.0)
+# Input dari user
+col1, col2 = st.columns(2)
 
-st.subheader("Kendala")
-A = []
-b = []
-
-col1, col2, col3 = st.columns(3)
 with col1:
-    a1 = st.number_input("Kendala 1 - x", value=2.0)
+    profit_meja = st.number_input("Keuntungan per Meja (Rp)", value=500000)
+    kayu_meja = st.number_input("Kebutuhan Kayu per Meja", value=3)
+    waktu_meja = st.number_input("Waktu Kerja per Meja (jam)", value=4)
+
 with col2:
-    a2 = st.number_input("Kendala 1 - y", value=1.0)
-with col3:
-    b1 = st.number_input("Batas Kendala 1", value=100.0)
+    profit_kursi = st.number_input("Keuntungan per Kursi (Rp)", value=300000)
+    kayu_kursi = st.number_input("Kebutuhan Kayu per Kursi", value=2)
+    waktu_kursi = st.number_input("Waktu Kerja per Kursi (jam)", value=2)
 
-col4, col5, col6 = st.columns(3)
-with col4:
-    a3 = st.number_input("Kendala 2 - x", value=1.0)
-with col5:
-    a4 = st.number_input("Kendala 2 - y", value=1.0)
-with col6:
-    b2 = st.number_input("Batas Kendala 2", value=80.0)
+st.markdown("### Batasan Sumber Daya")
+total_kayu = st.number_input("Total Kayu Tersedia", value=120)
+total_waktu = st.number_input("Total Jam Kerja Tersedia", value=160)
 
-if st.button("🔍 Hitung Solusi Optimal"):
-    # Format LP untuk linprog (minimisasi)
-    c = [-c1, -c2]  # Negatif karena linprog = minimisasi
-    A_ub = [[a1, a2], [a3, a4]]
-    b_ub = [b1, b2]
+if st.button("Hitung Optimasi"):
+    # Fungsi objektif (max → min)
+    c = [-profit_meja, -profit_kursi]
 
-    result = linprog(c, A_ub=A_ub, b_ub=b_ub, method="highs")
+    # Matriks kendala
+    A = [
+        [kayu_meja, kayu_kursi],
+        [waktu_meja, waktu_kursi]
+    ]
+    b = [total_kayu, total_waktu]
+
+    result = linprog(c, A_ub=A, b_ub=b, method="highs")
 
     if result.success:
+        x, y = result.x
+        total_profit = -result.fun
+
         st.success("✅ Solusi optimal ditemukan!")
-        st.write(f"Nilai x = **{result.x[0]:.2f}**")
-        st.write(f"Nilai y = **{result.x[1]:.2f}**")
-        st.write(f"Nilai maksimum Z = **{-result.fun:.2f}**")
+        st.write(f"Jumlah Meja yang diproduksi: **{x:.2f}**")
+        st.write(f"Jumlah Kursi yang diproduksi: **{y:.2f}**")
+        st.write(f"Total Keuntungan Maksimum: **Rp {total_profit:,.2f}**")
     else:
         st.error("❌ Gagal menemukan solusi.")
-        st.text(result.message)
